@@ -1,4 +1,6 @@
+import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 void main() => runApp(MyApp());
 
@@ -81,26 +83,51 @@ class _MyListWidgetState extends State<MyListWidget> {
     ]
   );
 
-  Widget _buildRow(BuildContext context, String text, int pos) {
-    return
-      Container(
-          child: Hero(
-              tag: "line" + pos.toString(),
-              child: Card(
-                child: ListTile(
-                    title: Text(text),
-                    onTap: () =>
-                        Navigator.push(context, MaterialPageRoute(
-                            builder: (c) => DetailScreen(line: text, pos: pos)))
-                ),
-              )
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-          )
-      );
-  }
+  Widget _buildRow(BuildContext context, String text, int pos) =>
+    Container(
+      color: Colors.white,
+      child:
+        GestureDetector(
+          onTap: () =>
+              Navigator.push(context, MaterialPageRoute(builder: (c) =>
+                  DetailScreen(line: text, pos: pos))),
+          child: _ListItem(pos: pos, text: text)
+        )
+    );
+}
 
+class _ListItem extends StatelessWidget {
+  _ListItem({this.pos, this.text});
+
+  final pos;
+  final text;
+
+  @override
+  Widget build(BuildContext context) =>
+    Hero(tag: "line" + pos.toString(), child:
+      Card(child:
+        ListTile(
+          title: Text(text, style: TextStyle(fontSize: 18.0)),
+        ),
+      )
+    );
+}
+
+class _SeparatedText extends StatelessWidget {
+  _SeparatedText({this.text, this.size, this.pos});
+
+  final String text;
+  final size;
+  final pos;
+
+  @override
+  Widget build(BuildContext context) =>
+    Hero(tag: "line" + pos.toString(), child: Material(child: Wrap(children:
+      text.split(" ").map((s) => Card(child:
+        Container(padding: EdgeInsets.all(10.0), child:
+          Text(s, style: TextStyle(fontSize: this.size))))
+      ).toList(),
+    )));
 }
 
 class DetailScreen extends StatefulWidget {
@@ -113,21 +140,36 @@ class DetailScreen extends StatefulWidget {
   State<StatefulWidget> createState() => _DetailScreenState();
 }
 
-class _DetailScreenState extends State<DetailScreen> {
+class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderStateMixin {
+
+  AnimationController controller;
+  Animation<double> animation;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(
+        duration: Duration(milliseconds: 500), vsync: this);
+    animation = Tween(begin: 18.0, end: 30.0).animate(controller)
+      ..addListener(() => setState(() {}));
+
+    Future.delayed(Duration(milliseconds: 500), () => controller.forward() );
+  }
 
   @override
   Widget build(BuildContext context) =>
-      Scaffold(
-        appBar: AppBar(
-          title: Text("Detail Screen", style: TextStyle(color: Colors.white)),
-        ),
-        body: Hero(
-              tag: "line"+widget.pos.toString(),
-              child: Card(
-                child: ListTile(
-                    title: Text(widget.line),
-                )
-              )
-          ),
-      );
+    Scaffold(
+      appBar: AppBar(
+        title: Text("Detail Screen", style: TextStyle(color: Colors.white)),
+      ),
+      body: Container(padding: EdgeInsets.all(10.0), child:
+        _SeparatedText(pos: widget.pos, text: widget.line, size: animation.value)
+      )
+    );
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
 }
