@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart' show rootBundle;
-
 import 'utils.dart';
 
-class ShakespeareDataSource implements DataSource {
+class ShakespeareDataSource implements DataSource<Null> {
   StreamController<List<String>> _controller = StreamController();
-  get stream => _controller.stream;
+
+  @override
+  stream() => _controller.stream;
 
   @override
   void fetch() {
@@ -19,13 +20,19 @@ class ShakespeareDataSource implements DataSource {
   void dispose() {
     _controller.close();
   }
+
+  @override
+  void push(Null inupt) {}
 }
 
-class RemoteCommentData implements DataSource {
+
+class RemoteCommentData implements DataSource<String> {
   RemoteCommentData({this.lineNum});
   final lineNum;
-  StreamController<String> _controller = StreamController();
-  get stream => _controller.stream;
+  final StreamController<DataSourceResult> _controller = StreamController();
+
+  @override
+  stream() => _controller.stream;
 
   @override
   void dispose() {
@@ -35,21 +42,26 @@ class RemoteCommentData implements DataSource {
   @override
   Future<Null> fetch() async {
     try {
+      _controller.add(DataSourceResult.loading());
       var response = await http.get("http://newfivefour.com:4040/get?line=$lineNum");
-      _controller.add((response.body == null) ? "" : response.body);
+      var r = (response.body == null) 
+        ? DataSourceResult.error("Bad result") 
+        : DataSourceResult.make(response.body);
+      _controller.add(r);
     } catch(e) {
-      _controller.add("An error has occurred!");
+      _controller.add(DataSourceResult.error("An error has occurred!"));
     }
   }
 
-  void saveComment(lineNum, text) async {
+  @override
+  void push(String input) async {
     try {
       await http.get("http://newfivefour.com:4040/add"
           "?line=$lineNum"
-          "&comment=${Uri.encodeComponent(text)}");
+          "&comment=${Uri.encodeComponent(input)}");
       fetch();
     } catch(e) {
-      _controller.add("An error has occurred!");
+      _controller.add(DataSourceResult.error("An error has occurred!"));
     }
   }
 }

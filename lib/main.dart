@@ -25,7 +25,7 @@ class _MyListWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) => 
     DataSourceBuilder(ds: will, sb:
-      StreamBuilder(stream: will.stream, initialData: [""], builder: (b, snap) =>
+      StreamBuilder(stream: will.stream(), initialData: [""], builder: (b, snap) =>
         CustomScrollView(slivers: [
           SliverAppBar(
             pinned: false,
@@ -48,12 +48,12 @@ class _MyListWidget extends StatelessWidget {
       )
     );
 
-  Widget _buildRow(BuildContext context, String text, int pos) =>
-    Container(color: Colors.white, child:
+  Widget _buildRow(BuildContext context, String text, int pos) {
+    return Container(color: Colors.white, child:
       GestureDetector(
         onTap: () =>
           Navigator.push(context, 
-            MaterialPageRoute(builder: (c) =>
+            MaterialPageRoute(builder: (c) => 
               DetailScreen(line: text, pos: pos)
             )
           ),
@@ -61,6 +61,7 @@ class _MyListWidget extends StatelessWidget {
           _ListItem(pos: pos, text: text)
       )
     );
+  }
 }
 
 class _ListItem extends StatelessWidget {

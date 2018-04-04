@@ -4,9 +4,12 @@ import 'utils.dart';
 import 'data.dart'; 
 
 class DetailScreen extends StatelessWidget {
-  DetailScreen({key, this.line, this.pos}) : super(key: key);
+  DetailScreen({key, this.line, this.pos}) 
+    : commentDataSource = new RemoteCommentData(lineNum: pos), 
+    super(key: key) ;
   final String line;
   final int pos;
+  final DataSource commentDataSource;
 
   @override
   Widget build(BuildContext context) =>
@@ -16,16 +19,20 @@ class DetailScreen extends StatelessWidget {
           title: Text("Detail Screen", style: TextStyle(color: Colors.white)),
         ),
       body: 
-        Padding(padding: EdgeInsets.all(20.0), child:
-          Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
-            _SeparatedText(pos: pos, text: line),
-            Padding(padding: EdgeInsets.only(top: 50.0), child:
-              _CommentInput(lineNum: pos, streamer: new RemoteCommentData(lineNum: pos))
+        RefreshIndicator(onRefresh: commentDataSource.fetch, child:
+          ListView(children: [
+            Padding(padding: EdgeInsets.all(20.0), child:
+              Column(crossAxisAlignment:CrossAxisAlignment.start, children:[
+                _SeparatedText(pos: pos, text: line),
+                Padding(padding: EdgeInsets.only(top: 50.0), child:
+                  _CommentInput(dataSource: commentDataSource)
+                )
+              ])
             )
           ])
         )
     );
-}
+  }
 
 class _SeparatedText extends StatelessWidget {  
   _SeparatedText({this.text, this.pos});
@@ -35,11 +42,13 @@ class _SeparatedText extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) =>
-    Hero(tag: "line"+pos.toString(), child: Wrap(children:
-      text.split(" ").map((s) =>
-        _SingleSeparatedWord(word: s)
-      ).toList(),
-    ));
+    //iHero(tag: "line"+pos.toString(), child: 
+      Wrap(children:
+        text.split(" ").map((s) =>
+          _SingleSeparatedWord(word: s)
+        ).toList(),
+      );
+    //);
 }
 
 class _SingleSeparatedWord extends StatelessWidget {
@@ -68,19 +77,21 @@ class _SingleSeparatedWord extends StatelessWidget {
 }
 
 class _CommentInput extends StatelessWidget{
-  _CommentInput({this.text, this.lineNum, this.streamer});
-  final lineNum;
-  final text;
-  final RemoteCommentData streamer; 
+  _CommentInput({this.dataSource});
+  final DataSource dataSource; 
   final _textInputController = TextEditingController();
 
   @override
   Widget build(BuildContext context) => 
-    DataSourceBuilder(ds: streamer, sb:
-      StreamBuilder<String>(stream: streamer.stream, initialData: "", builder: (b, snapshot) =>
-        Column(crossAxisAlignment: CrossAxisAlignment.start ,children: [
+    DataSourceBuilder(ds: dataSource, sb:
+      StreamBuilder<DataSourceResult>(stream: dataSource.stream(), initialData: DataSourceResult(), builder: (b, snap) =>
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(padding: EdgeInsets.symmetric(vertical: 10.0), child:
-            Text(snapshot.data, style: TextStyle(fontSize: 22.0))
+            Stack(alignment: AlignmentDirectional.center , children: [
+              CircularProgressIndicator(value: snap.data.isLoading ? null : 0.0),
+              Text(snap.data.data ?? "", style: TextStyle(fontSize: 22.0)),
+              Text(snap.data.isError && snap.data.data == null ? "Server error" : "", style: TextStyle(fontSize: 22.0))
+            ])
           ),
           TextField(maxLines: null, 
             decoration: InputDecoration(hintText: "Input your comment.."),
@@ -91,7 +102,7 @@ class _CommentInput extends StatelessWidget{
               child: 
                 Text("Create comment"),
               onPressed: () {
-                streamer.saveComment(lineNum, _textInputController.text);
+                this.dataSource.push(_textInputController.text.trim());
                 _textInputController.text = "";
               }
             )
@@ -100,24 +111,3 @@ class _CommentInput extends StatelessWidget{
       )
     );
 }
-
-/*
-      RefreshIndicator(onRefresh: () => commentDataStreamer.fetch(), child:
-        ListView(children: [
-          Container(padding: EdgeInsets.all(20.0), child:
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(padding: EdgeInsets.only(bottom: 20.0), child:
-                _SeparatedText(pos: pos, text: line, size: _animation.value)
-              ),
-              Builder(ds: commentDataStreamer, sb:
-                StreamBuilder<String>(stream: commentDataStreamer.stream,
-                  initialData: "", builder: (buildContext, snapshot) =>
-                  _CommentInput(lineNum: line, text: snapshot.data, streamer: commentDataStreamer)
-                )
-              )
-            ])
-          )
-        ])
-      )
-    );
-    */
